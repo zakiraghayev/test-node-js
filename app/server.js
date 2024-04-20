@@ -6,6 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(cors()); 
 
+const escpos = require('escpos');
+escpos.USB = require('escpos-usb');
+
 // API endpoints
 // Get all items
 app.get('/items', (req, res) => {
@@ -31,6 +34,41 @@ app.post('/items', (req, res) => {
         }
         res.json({ "message": "success", "id": this.lastID });
     });
+});
+
+
+
+app.post('/print', (req, res) => {
+    const { text } = req.body; // Get text from the POST request body
+
+    try {
+        // Assuming your Xprinter is connected via USB
+        const device = new escpos.USB();  
+        device.open((error) => {
+            if (error) {
+                console.error('Error opening device:', error);
+                res.status(500).json({ error: "Failed to access printer" });
+                return;
+            }
+    
+            const printer = new escpos.Printer(device);
+            
+            printer
+                .font('a')
+                .align('ct')
+                .style('bu')
+                .size(1, 1)
+                .text(text)
+                .cut()
+                .close(() => {
+                    res.json({ message: "Printed successfully" });
+                });
+        }); 
+    } catch (error) {
+        console.error("Can not find printer", { error })
+    }
+
+    
 });
 
 // Default response for any other request
